@@ -1,61 +1,88 @@
-import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-import startOfWeek from 'date-fns/startOfWeek';
-import getDay from 'date-fns/getDay';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
+import React, { useState } from 'react';
+import CalendarModal from './CalendarModal';
 
-import { useState } from 'react';
+const App = () => {
+  const [events, setEvents] = useState({});
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [eventText, setEventText] = useState('');
 
-const locales = {
-  'en-US': require('date-fns/locale/en-US'),
-};
+  // Track viewed month/year
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek,
-  getDay,
-  locales,
-});
+  const getDaysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
 
-function App() {
-  const [myEvents, setMyEvents] = useState([
-    {
-      title: 'Initial Event',
-      allDay: true,
-      start: new Date(),
-      end: new Date(),
-    },
-  ]);
+  const days = [];
+  const numDays = getDaysInMonth(currentMonth, currentYear);
 
-  const handleSelectSlot = ({ start, end }) => {
-    const title = prompt('Enter event title:');
-    if (title) {
-      const newEvent = {
-        title,
-        start,
-        end,
-        allDay: true,
-      };
-      setMyEvents(prev => [...prev, newEvent]);
+  for (let i = 1; i <= numDays; i++) {
+    days.push(new Date(currentYear, currentMonth, i));
+  }
+
+  const handleDayClick = (date) => {
+    setSelectedDate(date);
+    setEventText(events[date.toDateString()] || '');
+    setShowModal(true);
+  };
+
+  const handleSaveEvent = () => {
+    setEvents({ ...events, [selectedDate.toDateString()]: eventText });
+    setShowModal(false);
+    setEventText('');
+  };
+
+  const goToPreviousMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
     }
   };
 
+  const goToNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  const monthName = new Date(currentYear, currentMonth).toLocaleString('default', { month: 'long' });
+
   return (
-    <div className="App" style={{ height: '100vh', padding: '20px' }}>
-      <h2>🗓️ Shared Calendar</h2>
-      <Calendar
-        localizer={localizer}
-        events={myEvents}
-        startAccessor="start"
-        endAccessor="end"
-        selectable
-        onSelectSlot={handleSelectSlot}
-        style={{ height: '90vh' }}
-      />
+    <div>
+      <h1 style={{ textAlign: 'center' }}>House Sitting Calendar</h1>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
+        <button onClick={goToPreviousMonth} style={{ marginRight: '10px' }}>← Previous</button>
+        <h2>{monthName} {currentYear}</h2>
+        <button onClick={goToNextMonth} style={{ marginLeft: '10px' }}>Next →</button>
+      </div>
+
+      <div className="calendar">
+        {days.map((day, idx) => (
+          <div key={idx} className="day" onClick={() => handleDayClick(day)}>
+            <strong>{day.getDate()}</strong>
+            {events[day.toDateString()] && (
+              <div className="event">{events[day.toDateString()]}</div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {showModal && (
+        <CalendarModal
+          date={selectedDate}
+          onClose={() => setShowModal(false)}
+          onSave={handleSaveEvent}
+          eventText={eventText}
+          setEventText={setEventText}
+        />
+      )}
     </div>
   );
-}
+};
 
 export default App;
